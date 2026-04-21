@@ -22,7 +22,7 @@ Rough time estimate: **30–45 minutes** the first time.
 ## 1. Create the project
 
 ```bash
-export PROJECT_ID="personalcrm-$(date +%s | tail -c6)"   # or any globally-unique id
+export PROJECT_ID="personalcrm-8342"   # or any globally-unique id
 export REGION="us-west1"
 export ZONE="us-west1-a"
 
