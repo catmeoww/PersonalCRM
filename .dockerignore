@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.github
+data
+*.sqlite
+*.sqlite-*
+tests
+docs
+README.md
+.env
+.env.local
+.vscode
+.idea
+.DS_Store
+tsconfig.tsbuildinfo

@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    image: personalcrm:latest
+    container_name: personalcrm
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: /app/data/personalcrm.sqlite
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/contacts >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
