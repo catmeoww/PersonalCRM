@@ -115,12 +115,46 @@ cd /opt/personalcrm
 git clone https://github.com/catmeoww/personalcrm.git .
 git checkout claude/contact-management-system-c7j84   # or main once merged
 
+mkdir -p data
 docker compose up -d --build
 docker compose ps
 ```
 
-The container exposes port 3000. Bind-mounted `./data/` holds the SQLite file
-and survives container restarts / image rebuilds.
+The container runs as uid 1000 (the same as your VM user) to match the
+ownership of the bind-mounted `./data/` and `~/.claude/` directories. The
+SQLite file in `./data/` survives container restarts and image rebuilds.
+
+### Install Claude Code on the VM (powers the import-from-text feature)
+
+The Next.js container shells out to `claude -p` for the freeform-text import.
+Auth happens **on the VM**, in the host user's `~/.claude/`, which the
+container mounts read/write at `/home/app/.claude`.
+
+```bash
+# Install Node 20 + Claude Code CLI on the VM
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+sudo npm install -g @anthropic-ai/claude-code
+claude --version
+
+# One-time auth — opens a device-code prompt. Run interactively:
+claude
+# Inside the CLI: type /login, follow the URL on your laptop browser,
+# paste the code back, then /exit.
+
+# Smoke-test non-interactive mode:
+claude -p "Reply with exactly: hello world" --output-format text
+```
+
+After auth, restart the app container so it picks up the mounted creds:
+
+```bash
+docker compose up -d
+```
+
+If the freeform-text import errors with `claude not found` or auth issues,
+the import flow falls back to a heuristic extractor (regex for email/phone +
+preserving the raw paste as a note), so the feature degrades gracefully.
 
 ---
 
@@ -240,6 +274,18 @@ gcloud projects delete "$PROJECT_ID"
 - **Container fails to start, `better-sqlite3` error** — rebuild the image on
   the VM (`docker compose build --no-cache`). The native binding compiles
   inside the container, so the host's libc version doesn't matter.
+- **500 on first page load, log shows `SQLITE_CANTOPEN`** — the host `./data`
+  directory is owned by a uid the container can't write. Fix:
+  `sudo chown -R 1000:1000 /opt/personalcrm/data && docker compose restart app`.
+- **Freeform-text import says "Claude was unavailable"** — confirm the
+  credentials volume mount and CLI on the VM:
+  ```bash
+  ls -la ~/.claude/.credentials.json
+  claude -p "ping" --output-format text
+  docker compose exec app claude --version   # must print a version inside the container
+  ```
+  If `docker compose exec app claude` errors, the image is stale — `docker
+  compose build --no-cache` and `docker compose up -d`.
 - **Voice button does nothing on iPhone** — you're probably on `http://`. Use
   the `https://…ts.net` Tailscale Serve URL from step 6.
 - **Can't reach the VM** — verify both your laptop/phone and the VM show up in

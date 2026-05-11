@@ -8,12 +8,20 @@ function norm(s: string): string {
   return s.trim().toLowerCase();
 }
 
+export function normalizePhone(s: string): string {
+  return s.replace(/\D+/g, '');
+}
+
+export function normalizeEmail(s: string): string {
+  return s.trim().toLowerCase();
+}
+
 export function buildSearchTokens(input: {
   contactId: number;
   displayName: string;
   nicknames: string[];
   kids: Array<Pick<KidInput, 'name'>>;
-  handles: Array<Pick<HandleInput, 'handle' | 'displayName'>>;
+  handles: Array<{ platform: string; handle: string; displayName?: string | null }>;
 }) {
   const rows: Array<{ contactId: number; kind: string; token: string }> = [];
   const push = (kind: string, token: string) => {
@@ -30,7 +38,14 @@ export function buildSearchTokens(input: {
     for (const part of k.name.split(/\s+/)) push('kid', part);
   }
   for (const h of input.handles) {
-    push('handle', h.handle);
+    if (h.platform === 'email') {
+      push('email', normalizeEmail(h.handle));
+    } else if (h.platform === 'sms' || h.platform === 'imessage') {
+      const digits = normalizePhone(h.handle);
+      if (digits) push('phone', digits);
+    } else {
+      push('handle', h.handle);
+    }
     if (h.displayName) push('handle', h.displayName);
   }
   return rows;

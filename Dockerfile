@@ -20,19 +20,28 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-RUN groupadd --system --gid 1001 nodejs \
- && useradd  --system --uid 1001 --gid nodejs nextjs
+# Install the claude CLI inside the image so the import service can shell out
+# to it. Credentials come from a bind-mounted ~/.claude at runtime.
+RUN npm install -g @anthropic-ai/claude-code \
+ && claude --version
 
-COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/package-lock.json ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/next.config.mjs ./
+# Run as the host user (uid 1000) so bind-mounted ~/.claude and ./data are
+# readable/writable without chown gymnastics. docker-compose.yml pins the
+# uid; this just creates a matching account for $HOME resolution.
+RUN groupadd --system --gid 1000 app \
+ && useradd  --system --uid 1000 --gid app --create-home --home-dir /home/app app
 
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+COPY --from=builder --chown=app:app /app/package.json /app/package-lock.json ./
+COPY --from=builder --chown=app:app /app/.next ./.next
+COPY --from=builder --chown=app:app /app/public ./public
+COPY --from=builder --chown=app:app /app/node_modules ./node_modules
+COPY --from=builder --chown=app:app /app/next.config.mjs ./
+
+RUN mkdir -p /app/data && chown -R app:app /app/data
 VOLUME ["/app/data"]
 ENV DATABASE_URL=/app/data/personalcrm.sqlite
+ENV HOME=/home/app
 
-USER nextjs
+USER app
 EXPOSE 3000
 CMD ["npm", "start"]

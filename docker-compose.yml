@@ -4,13 +4,19 @@ services:
     image: personalcrm:latest
     container_name: personalcrm
     restart: unless-stopped
+    user: "1000:1000"
     ports:
       - "3000:3000"
     volumes:
       - ./data:/app/data
+      # Mount the host's Claude Code credentials so the in-container `claude`
+      # CLI reuses your Max subscription. Auth once on the VM with
+      # `claude` interactive `/login` — see docs/DEPLOY.md.
+      - ${HOME}/.claude:/home/app/.claude
     environment:
       NODE_ENV: production
       DATABASE_URL: /app/data/personalcrm.sqlite
+      HOME: /home/app
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/contacts >/dev/null 2>&1 || exit 1"]
       interval: 30s

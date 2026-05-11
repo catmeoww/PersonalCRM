@@ -22,11 +22,16 @@ export default function ContactsPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-4">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Contacts</h1>
-        <Link href="/contacts/new" className="btn-primary">
-          + New
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/import" className="btn-secondary">
+            Import
+          </Link>
+          <Link href="/contacts/new" className="btn-primary">
+            + New
+          </Link>
+        </div>
       </header>
 
       <SearchInput defaultValue={q ?? ''} />
